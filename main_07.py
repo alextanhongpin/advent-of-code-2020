@@ -5,22 +5,21 @@ def parse_rules(rules):
   for rule in rules:
     # Strip whitespaces, and remove dot `.` character.
     rule = rule.strip()[:-1]
-    big_bag, bags = rule.split(' contain ')
-    big_bag = big_bag.replace('bags', 'bag').strip()
-    small_bags = bags.split(', ')
 
+    # Convert plurals to singular for uniform keys.
+    rule = rule.replace('bags', 'bag')
+
+    big_bag, bags = rule.split(' contain ')
+    big_bag.strip()
+
+    small_bags = bags.split(', ')
     bag_rules[big_bag] = {}
+    
     for small_bag in small_bags:
       if (matches := re.findall('[0-9]+', small_bag)):
-        number_of_bags = int(matches[0])
-
-        # Remove the number of bags.
+        number_of_bags = matches[0]
         small_bag = small_bag.replace(matches[0], '').strip()
-
-        # Convert plurals to singular for uniform keys.
-        small_bag = small_bag.replace('bags', 'bag') 
-
-        bag_rules[big_bag][small_bag] = number_of_bags
+        bag_rules[big_bag][small_bag] = int(number_of_bags)
       else:
         bag_rules[big_bag][small_bag] = 0
 
