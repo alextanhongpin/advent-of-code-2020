@@ -2,7 +2,7 @@ TARGET = 2020
 
 def part_one():
     cache = {}
-    with open("2020/01_input.txt") as f:
+    with open("input_01.txt") as f:
         for line in f:
             diff = TARGET - int(line)
             if diff in cache:
@@ -12,7 +12,7 @@ def part_one():
 
 
 def part_two():
-    with open("2020/01_input.txt") as f:
+    with open("input_01.txt") as f:
         numbers = [int(line) for line in f.read().split('\n') if line != '']
         cache = {}
         for idx, n in enumerate(numbers):
