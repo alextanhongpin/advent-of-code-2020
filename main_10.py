@@ -1,36 +1,36 @@
 def adapt(input):
-  cache = {int(line.strip()): True for line in input}
+  xs = [int(line.strip()) for line in input]
+  xs = sorted([0, *xs, max(xs)+3])
 
-  def connect(i = 0):
-    if i == max(cache):
-      return (0, 1)
-
-    if i+1 in cache:
-      l, r = connect(i+1)
-      return (1 + l, r)
-    elif (i+3 in cache):
-      l, r = connect(i + 3)
-      return (l, r + 1)
-  ones, threes = connect(0)
-  return ones * threes
+  n1, n3 = 0, 0
+  for i in range(len(xs)-1):
+    delta = xs[i+1] - xs[i]
+    if delta == 1:
+      n1 += 1
+    elif delta == 3:
+      n3 += 1
+  return n1 * n3
 
 def combination(input):
-  cache = {int(line.strip()): True for line in input}
+  xs = [int(line.strip()) for line in input]
+  xs = sorted([0, *xs, max(xs)+3])
 
-  def connect(i):
-    if i == max(cache):
-      return i-3 in cache
+  cache = {}
+  def dp(i):
+    if i == len(xs)-1:
+      return 1
+    
+    if i in cache:
+      return cache[i]
 
     total = 0
-    if i+1 in cache:
-      total += connect(i + 1)
-    if i+2 in cache:
-      total += connect(i + 2)
-    if i+3 in cache: 
-      total += connect(i + 3)
+    for j in range(i+1, len(xs)):
+      if xs[j] - xs[i] <= 3:
+        total += dp(j)
+    cache[i] = total
     return total
     
-  return connect(0)
+  return dp(0)
 
 def part_one():
   with open('input_10.txt') as f:
