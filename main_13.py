@@ -8,18 +8,17 @@ def parse_input(input):
 
 def schedule(input):
   ts, bus_ids = parse_input(input)
-  result = []
-
-  def check_earliest_ride(n, bus_id):
-    while n % bus_id != 0:
-      n += 1
-    return n
+  min_time, first_bus = float('inf'), None
 
   for bus_id in bus_ids:
-    result.append(check_earliest_ride(ts, bus_id))
+    n = ts
+    if n % bus_id != 0:
+      n = (n // bus_id + 1) * bus_id
+    if n < min_time:
+      min_time = n
+      first_bus = bus_id
 
-  earliest_bus = bus_ids[result.index(min(result))]
-  return (min(result) - ts) * earliest_bus
+  return (min_time - ts) * first_bus
 
 def schedule2(input):
   input = [line.strip() for line in input]
