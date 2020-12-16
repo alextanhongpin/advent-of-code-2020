@@ -81,9 +81,9 @@ def ticket_departure(input):
         valid_tickets['all'][i] = True
 
   for ticket in tickets:
+    if not all([nr in valid_tickets['all'] for nr in ticket]):
+      continue
     for i, nr in enumerate(ticket):
-      if nr not in valid_tickets['all']:
-        break
       for label in list(orders[i]):
         if nr not in valid_tickets[label]:
           orders[i].remove(label)
