@@ -22,6 +22,7 @@ func NewRange(lo, hi int) Range {
 }
 
 type Rule struct {
+	id     int
 	name   string
 	ranges []Range
 }
@@ -173,22 +174,12 @@ func main() {
 			if _, ok := columnMapping[i]; ok {
 				continue
 			}
-			var potentialColumns []Rule
-			var k int
 			for j := range rules {
-				b := 1 << j
-				if col&b == b {
-					k = j
-					potentialColumns = append(potentialColumns, rules[j])
-					if len(potentialColumns) > 1 {
-						break
+				if col == (1 << j) {
+					columnMapping[i] = rules[j].name
+					for c := range columns {
+						columns[c] &^= (1 << j)
 					}
-				}
-			}
-			if len(potentialColumns) == 1 {
-				columnMapping[i] = potentialColumns[0].name
-				for c := range columns {
-					columns[c] &^= (1 << k)
 				}
 			}
 		}
