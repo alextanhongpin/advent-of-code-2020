@@ -10,8 +10,32 @@ function operation(l, r, op) {
       return l * r;
   }
 }
+function reducer(numbers, operations) {
+  let l = numbers.shift();
+  while (numbers.length) {
+    const op = operations.shift();
+    const r = numbers.shift();
+    l = operation(l, r, op);
+  }
+  return l;
+}
+function precedence(numbers, operations) {
+  let l = numbers.shift().toString();
+  while (numbers.length) {
+    l += operations.shift() ?? "";
+    l += numbers.shift().toString();
+  }
+  const additions = l.split("*");
+  if (!additions.length) return 0;
+  return additions
+    .map(addition => {
+      const n = addition.split("+").map(Number);
+      return n.reduce((l, r) => l + r);
+    })
+    .reduce((l, r) => l * r);
+}
 
-function parse(input) {
+function parse(input, solver = reducer) {
   const n = input.replaceAll(" ", "").split("");
 
   const operators = [];
@@ -32,13 +56,7 @@ function parse(input) {
         }
         tmpNumbers.reverse();
         tmpOperations.reverse();
-        let l = tmpNumbers.shift();
-        while (tmpNumbers.length) {
-          const op = tmpOperations.shift();
-          const r = tmpNumbers.shift();
-          l = operation(l, r, op);
-        }
-        numbers.push(l);
+        numbers.push(solver(tmpNumbers, tmpOperations));
       } else {
         operators.push(s);
       }
@@ -46,13 +64,7 @@ function parse(input) {
       numbers.push(Number(s));
     }
   }
-  let l = numbers.shift();
-  while (numbers.length) {
-    const op = operators.shift();
-    const r = numbers.shift();
-    l = operation(l, r, op);
-  }
-  return l;
+  return solver(numbers, operators);
 }
 console.log(parse("1 + (2 * 3) + (4 * (5 + 6))"));
 console.log(parse("2 * 3 + (4 * 5)")); // 26
@@ -440,5 +452,16 @@ const input = `6 * 7 * 8 * 9 * ((8 * 3 * 9) * 7 + 2 + 4 * 8 + 2) + 5
 6 + 7 + 8 + (6 * (5 * 8 * 4 + 5 + 7) + 4 + 9 * (3 * 2)) + (7 + 6 + 6)
 (5 * 5 * 9 * 6 + (2 + 9 * 5 * 6) + 9) + 7 * 6`;
 const lines = input.split("\n");
-const result = lines.map(parse);
+const result = lines.map(line => parse(line));
 console.log(result.reduce((total, n) => total + n));
+
+console.log(parse("1 + 2 * 3 + 4 * 5 + 6", precedence)); // 231
+console.log(parse("1 + (2 * 3) + (4 * (5 + 6))", precedence)); // 51
+console.log(parse("2 * 3 + (4 * 5)", precedence)); // 46
+console.log(parse("5 + (8 * 3 + 9 + 3 * 4 * 3)", precedence)); // 1445
+console.log(parse("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))", precedence)); // 669060
+console.log(
+  parse("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2", precedence)
+); // 23340
+const result2 = lines.map(line => parse(line, precedence));
+console.log(result2.reduce((total, n) => total + n));
