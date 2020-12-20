@@ -8,114 +8,97 @@ const input = `#...#...
 ##.#.#.#`;
 
 const rows = input.split("\n");
-const world = {};
-world[0] = rows.flatMap((row, y) =>
+const world = rows.flatMap((row, y) =>
   row.split("").map((col, x) => ({
     x: Number(x),
     y: Number(y),
+    z: 0,
+    w: 0,
     state: col
   }))
 );
 
-function range(world, i) {
-  const arr = Object.keys(world).reduce((arr, key) => {
-    return arr.concat(world[key]);
-  }, []);
-  const range = arr.map(cube => cube[i]);
-  const min = Math.min(...range) - 1;
-  const max = Math.max(...range) + 1;
-  return { min, max };
-}
-
-function ranges(world) {
-  const positions = Object.keys(world).map(Number);
-  const zmin = Math.min(...positions) - 1;
-  const zmax = Math.max(...positions) + 1;
-  const { min: xmin, max: xmax } = range(world, "x");
-  const { min: ymin, max: ymax } = range(world, "y");
+function buildRange(world, attr) {
+  const positions = Array.from(new Set(world.map(cube => cube[attr])));
   return {
-    xmin,
-    xmax,
-    ymin,
-    ymax,
-    zmin,
-    zmax
+    min: Math.min(...positions) - 1,
+    max: Math.max(...positions) + 1
   };
 }
 
-function checkNeighbours({ world, x, y, z }) {
-  world = JSON.parse(JSON.stringify(world));
-  const neighbours = [];
-
-  for (let i = z - 1; i <= z + 1; i++) {
-    if (!Array.isArray(world[i])) continue;
-
-    for (let item of world[i]) {
-      if (
-        item.x >= x - 1 &&
-        item.x <= x + 1 &&
-        item.y >= y - 1 &&
-        item.y <= y + 1 &&
-        item.state === "#"
-      ) {
-        if (item.x === x && item.y === y && z === i) {
-          continue;
-        }
-        neighbours.push(item);
-      }
-    }
-  }
-  return neighbours.length;
-}
-
-function buildWorldSlice(slices) {
-  const offsetX = -Math.min(...slices.map(cube => cube.x));
-  const offsetY = -Math.min(...slices.map(cube => cube.y));
-  const offsetSlices = slices.map(cube => {
-    cube.x += offsetX;
-    cube.y += offsetY;
-    return cube;
+function findNeighbours({ world, x, y, z }) {
+  const cubes = world.filter(cube => {
+    const validX = cube.x >= x - 1 && cube.x <= x + 1;
+    const validY = cube.y >= y - 1 && cube.y <= y + 1;
+    const validZ = cube.z >= z - 1 && cube.z <= z + 1;
+    const center = cube.x === x && cube.y === y && cube.z === z;
+    const isActive = cube.state === "#";
+    return validX && validY && validZ && isActive && !center;
   });
-  const maxX = Math.max(...offsetSlices.map(cube => cube.x));
-  const maxY = Math.max(...offsetSlices.map(cube => cube.y));
-  const slice = Array(maxY + 1)
-    .fill(() => Array(maxX + 1).fill("."))
-    .map(fn => fn());
-  for (let item of offsetSlices) {
-    slice[item.y][item.x] = item.state;
-  }
-  return slice;
+  return cubes.length;
 }
-
-function printWorld(world) {
-  for (let key in world) {
-    if (!world?.[key]?.length) continue;
-    const slice = buildWorldSlice(world[key]);
-    console.log(`z=${key}`);
-    console.log(slice.map(row => row.join("")).join("\n"));
-  }
+function findNeighbours4d({ world, x, y, z, w }) {
+  const cubes = world.filter(cube => {
+    const validX = cube.x >= x - 1 && cube.x <= x + 1;
+    const validY = cube.y >= y - 1 && cube.y <= y + 1;
+    const validZ = cube.z >= z - 1 && cube.z <= z + 1;
+    const validW = cube.w >= w - 1 && cube.w <= w + 1;
+    const center = cube.x === x && cube.y === y && cube.z === z && cube.w === w;
+    const isActive = cube.state === "#";
+    return validX && validY && validZ && validW && isActive && !center;
+  });
+  return cubes.length;
 }
 
 function boot(world) {
-  const { xmin, xmax, ymin, ymax, zmin, zmax } = ranges(world);
   const parallelWorld = JSON.parse(JSON.stringify(world));
+  const xrange = buildRange(world, "x");
+  const yrange = buildRange(world, "y");
+  const zrange = buildRange(world, "z");
 
-  for (let z = zmin; z <= zmax; z++) {
-    for (let y = ymin; y <= ymax; y++) {
-      for (let x = xmin; x <= xmax; x++) {
-        if (!parallelWorld[z]) parallelWorld[z] = [];
-        const n = checkNeighbours({
-          world,
-          x,
-          y,
-          z
-        });
-        if (parallelWorld[z]) {
-          const idx = parallelWorld[z].findIndex(
-            cube => cube.x === x && cube.y === y
+  for (let z = zrange.min; z <= zrange.max; z++) {
+    for (let y = yrange.min; y <= yrange.max; y++) {
+      for (let x = xrange.min; x <= xrange.max; x++) {
+        const n = findNeighbours({ world, x, y, z });
+        const idx = parallelWorld.findIndex(
+          cube => cube.x === x && cube.y === y && cube.z === z
+        );
+        const exists = idx > -1;
+        const cube = exists ? parallelWorld[idx] : { x, y, z, state: "." };
+        switch (cube.state) {
+          case "#":
+            cube.state = n === 2 || n === 3 ? "#" : ".";
+            break;
+          case ".":
+            cube.state = n === 3 ? "#" : ".";
+            break;
+        }
+        if (!exists) {
+          parallelWorld.push(cube);
+        }
+      }
+    }
+  }
+  return parallelWorld.filter(cube => cube.state === "#");
+}
+
+function boot4d(world) {
+  const parallelWorld = JSON.parse(JSON.stringify(world));
+  const xrange = buildRange(world, "x");
+  const yrange = buildRange(world, "y");
+  const zrange = buildRange(world, "z");
+  const wrange = buildRange(world, "w");
+
+  for (let w = wrange.min; w <= wrange.max; w++) {
+    for (let z = zrange.min; z <= zrange.max; z++) {
+      for (let y = yrange.min; y <= yrange.max; y++) {
+        for (let x = xrange.min; x <= xrange.max; x++) {
+          const n = findNeighbours4d({ world, w, x, y, z });
+          const idx = parallelWorld.findIndex(
+            cube => cube.x === x && cube.y === y && cube.z === z && cube.w === w
           );
           const exists = idx > -1;
-          const cube = exists ? parallelWorld[z][idx] : { x, y, state: "." };
+          const cube = exists ? parallelWorld[idx] : { w, x, y, z, state: "." };
           switch (cube.state) {
             case "#":
               cube.state = n === 2 || n === 3 ? "#" : ".";
@@ -124,41 +107,26 @@ function boot(world) {
               cube.state = n === 3 ? "#" : ".";
               break;
           }
-          if (exists) {
-            parallelWorld[z][idx] = { ...cube };
-          } else {
-            parallelWorld[z].push(cube);
+          if (!exists) {
+            parallelWorld.push(cube);
           }
-        } else {
-          parallelWorld[z].push({ x, y, z, state: n === 3 ? "#" : "." });
         }
       }
     }
   }
-  for (let key in parallelWorld) {
-    if (!parallelWorld[key]) delete parallelWorld[key];
-    if (parallelWorld[key].every(cube => cube.state === ".")) {
-      delete parallelWorld[key];
-    }
-  }
-  return parallelWorld;
+  return parallelWorld.filter(cube => cube.state === "#");
 }
 
-function countCubes(world) {
-  let count = 0;
-  for (let key in world) {
-    count += world[key].filter(cube => cube.state === "#").length;
+function bootCycle(world, bootFn = boot, cycle = 0) {
+  if (cycle < 6) {
+    return bootCycle(bootFn(world), bootFn, cycle + 1);
   }
-  return count;
+  return world;
 }
 
-function bootCycle(world, i = 1) {
-  if (i > 6) {
-    return world;
-  }
-  const newWorld = boot(world);
-  printWorld(newWorld);
-  console.log("bootcycle", i, countCubes(newWorld));
-  return bootCycle(newWorld, i + 1);
-}
-bootCycle(world);
+const finalWorld = bootCycle(world);
+console.log(finalWorld.length);
+
+// The only difference is an additional loop for the 4th dimension.
+const finalWorld2 = bootCycle(world, boot4d);
+console.log(finalWorld2.length);
