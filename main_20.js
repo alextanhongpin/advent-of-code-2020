@@ -245,6 +245,10 @@ const TRANSFORMATIONS = [
   "flipHorizontalRotate270"
 ];
 
+function transform(name, matrix) {
+  return TILES[name](matrix);
+}
+
 function placeTile(tiles, tileIds, grid, n = 0, cache = {}) {
   if (!tileIds.length) {
     return grid;
@@ -359,13 +363,71 @@ function solver(input) {
     ids[ids.length - 1][0],
     ids[ids.length - 1][ids.length - 1]
   ];
-  return corners.reduce((a, b) => a * b);
+  console.log("Part 1:", corners.reduce((a, b) => a * b));
+
+  const dragon = `                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   `;
+  const dragonMatrix = dragon.split("\n").map(row => row.split(""));
+  const dragonPositions = dragonMatrix.flatMap((body, y) => {
+    return body.flatMap((tile, x) => (tile === "#" ? { x, y } : []));
+  });
+  const dragonHeight = dragonMatrix.length;
+  const dragonWidth = dragonMatrix[0].length;
+
+  const image = result
+    .map(row => {
+      row = [...row];
+      const image = Array(row[0].tile.length - 2)
+        .fill(() => [])
+        .map(fn => fn());
+      for (let tile of row) {
+        for (let i = 1; i < tile.tile.length - 1; i++) {
+          image[i - 1].push(...tile.tile[i].slice(1, tile.tile[i].length - 1));
+        }
+      }
+      const result = image.map(row => row.join("")).join("\n");
+      return result;
+    })
+    .join("\n");
+  const imageMatrix = image.split("\n").map(row => row.split(""));
+  for (let transformation of TRANSFORMATIONS) {
+    const rotated = transform(transformation, [
+      ...imageMatrix.map(row => [...row])
+    ]);
+
+    let matches = 0;
+    for (let y = 0; y < rotated.length - dragonHeight; y++) {
+      for (let x = 0; x < rotated[y].length - dragonWidth; x++) {
+        const match = dragonPositions.every(
+          position => rotated[y + position.y][x + position.x] === "#"
+        );
+        if (match) {
+          dragonPositions.every(
+            position => (rotated[y + position.y][x + position.x] = "O")
+          );
+          matches++;
+        }
+      }
+    }
+    if (matches) {
+      let total = 0;
+      for (let i = 0; i < rotated.length; i++) {
+        for (let j = 0; j < rotated[i].length; j++) {
+          total += rotated[i][j] === "#";
+        }
+      }
+      console.log(
+        `Part 2: found ${matches} dragons with water roughness ${total}`
+      );
+    }
+  }
 }
 
 console.time();
-console.log(solver(testInput));
+solver(testInput);
 console.timeEnd();
 
 console.time();
-console.log(solver(input));
+solver(input);
 console.timeEnd();
