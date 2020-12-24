@@ -8,87 +8,155 @@ import (
 )
 
 func main() {
-	input := "389125467"
-	input = "418976235"
-	cups := parseInput(input)
-	var move int
-	for i := 0; i < 100; i++ {
-		curr := cups[move]
-		pickUp := pickN(cups, move, 3)
-		available := exclude(cups, append(pickUp, curr))
-		destination := curr - 1
+	{
+		cups := parseInput("389125467")
+		n := 10
+		node := solver(cups, n)
+		fmt.Println(partOne(node, len(cups)-1)) // 92658374
+	}
+	{
+		// Part one.
+		cups := parseInput("418976235")
+		n := 100
+		node := solver(cups, n)
+		fmt.Println(partOne(node, len(cups)-1)) // 96342875
+	}
 
-		var hasDestination bool
-		for !hasDestination {
-			for _, n := range available {
-				if n == destination {
-					hasDestination = true
-					break
+	// Part two.
+	{
+		initials := parseInput("389125467")
+		n := 1_000_000 // 1 million.
+		cups := make([]int, n)
+		for i := 0; i < n; i++ {
+			if i < len(initials) {
+				cups[i] = initials[i]
+			} else {
+				cups[i] = i + 1
+			}
+		}
+		node := solver(cups, n*10)
+		fmt.Println(partTwo(node))
+	}
+
+	{
+		initials := parseInput("418976235")
+		n := 1_000_000 // 1 million.
+		cups := make([]int, n)
+		for i := 0; i < n; i++ {
+			if i < len(initials) {
+				cups[i] = initials[i]
+			} else {
+				cups[i] = i + 1
+			}
+		}
+		node := solver(cups, n*10)
+		fmt.Println(partTwo(node))
+	}
+}
+
+func solver(cups []int, n int) *Node {
+	cache := make(map[int]*Node)
+	var tail *Node
+	var max int
+	for i := 0; i < len(cups); i++ {
+		n := cups[i]
+		if n > max {
+			max = n
+		}
+		if tail == nil {
+			tail = NewNode(n)
+		} else {
+			tail.Next = NewNode(n)
+			tail.Next.Prev = tail
+			tail = tail.Next
+		}
+		cache[tail.Data] = tail
+	}
+	head := tail
+	for head.Prev != nil {
+		head = head.Prev
+	}
+	tail.Next = head
+	head.Prev = tail
+
+	maxNode := head
+	for maxNode.Data != max {
+		maxNode = maxNode.Prev
+	}
+	minNode := head
+	for minNode.Data != 1 {
+		minNode = minNode.Next
+	}
+	for i := 0; i < n; i++ {
+		curr := head
+		dst := curr.Data - 1
+
+		set := make(map[int]bool)
+		pickUpTailNode := curr
+		for i := 0; i < 3; i++ {
+			pickUpTailNode = pickUpTailNode.Next
+			set[pickUpTailNode.Data] = true
+		}
+		if dst == 0 {
+			dst = max
+		}
+		if set[dst] {
+			for set[dst] {
+				dst--
+				if dst == 0 {
+					dst = max
 				}
 			}
-			if !hasDestination {
-				destination--
-			}
-			if destination < 0 {
-				hasDestination = true
-				destination = max(available)
-			}
 		}
-		sepCups := exclude(cups, pickUp)
-		dstIdx := findIndex(sepCups, destination)
-		newCups := append([]int(nil), sepCups[:dstIdx+1]...)
-		newCups = append(newCups, pickUp...)
-		newCups = append(newCups, sepCups[dstIdx+1:]...)
-		cups = newCups
-		move = (findIndex(newCups, curr) + 1) % len(newCups)
-	}
-	idx := findIndex(cups, 1) + 1
 
-	var n int
-	for i := 0; i < len(cups)-1; i++ {
-		n = (n * 10) + cups[(i+idx)%len(cups)]
+		pickUpHeadNode := curr.Next
+		curr.Next = pickUpTailNode.Next
+		pickUpTailNode.Next.Prev = curr
+
+		curr = cache[dst]
+		for curr.Data != dst {
+			curr = curr.Next
+		}
+
+		tailNode := curr.Next
+		curr.Next = pickUpHeadNode
+		pickUpHeadNode.Prev = curr
+
+		pickUpTailNode.Next = tailNode
+		tailNode.Prev = pickUpTailNode
+		head = head.Next
 	}
-	fmt.Println(n)
+
+	return cache[1]
 }
 
-func pickN(in []int, offset, n int) []int {
+func partOne(head *Node, n int) []int {
 	result := make([]int, n)
 	for i := 0; i < n; i++ {
-		result[i] = in[(offset+1+i)%len(in)]
+		head = head.Next
+		result[i] = head.Data
 	}
 	return result
 }
 
-func findIndex(in []int, t int) int {
-	for i, n := range in {
-		if n == t {
-			return i
-		}
+func partTwo(node *Node) int {
+	for node.Data != 1 {
+		node = node.Next
 	}
-	return -1
-}
-func exclude(in []int, exclusion []int) []int {
-	m := make(map[int]bool)
-	for _, n := range exclusion {
-		m[n] = true
-	}
-	var result []int
-	for _, n := range in {
-		if !m[n] {
-			result = append(result, n)
-		}
-	}
-	return result
+	return node.Next.Data * node.Next.Next.Data
+
 }
 
-func max(in []int) int {
-	var result int
-	for _, n := range in {
-		if n > result {
-			result = n
-		}
+type Node struct {
+	Next *Node
+	Prev *Node
+	Data int
+}
+
+func NewNode(n int) *Node {
+	return &Node{
+		Data: n,
 	}
-	return result
 }
 
 func parseInput(in string) []int {
