@@ -56,7 +56,7 @@ func main() {
 
 func solver(cups []int, n int) *Node {
 	cache := make(map[int]*Node)
-	var tail *Node
+	var head, tail *Node
 	var max int
 	for i := 0; i < len(cups); i++ {
 		n := cups[i]
@@ -64,7 +64,8 @@ func solver(cups []int, n int) *Node {
 			max = n
 		}
 		if tail == nil {
-			tail = NewNode(n)
+			head = NewNode(n)
+			tail = head
 		} else {
 			tail.Next = NewNode(n)
 			tail.Next.Prev = tail
@@ -72,21 +73,10 @@ func solver(cups []int, n int) *Node {
 		}
 		cache[tail.Data] = tail
 	}
-	head := tail
-	for head.Prev != nil {
-		head = head.Prev
-	}
+
 	tail.Next = head
 	head.Prev = tail
 
-	maxNode := head
-	for maxNode.Data != max {
-		maxNode = maxNode.Prev
-	}
-	minNode := head
-	for minNode.Data != 1 {
-		minNode = minNode.Next
-	}
 	for i := 0; i < n; i++ {
 		curr := head
 		dst := curr.Data - 1
@@ -114,9 +104,6 @@ func solver(cups []int, n int) *Node {
 		pickUpTailNode.Next.Prev = curr
 
 		curr = cache[dst]
-		for curr.Data != dst {
-			curr = curr.Next
-		}
 
 		tailNode := curr.Next
 		curr.Next = pickUpHeadNode
