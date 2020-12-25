@@ -8,24 +8,26 @@ import (
 )
 
 func main() {
+	// The problem can be solved by using reverse linked list.
+	// The property of the solution (each number can represent an index in an array, starting from 1, not zero)
+	// allows efficient usage of array.
+	// In the input below, "38...", to map 3 to 8, we set the array[3] = 8
 	{
-		cups := parseInput("389125467")
-		n := 10
-		node := solver(cups, n)
-		fmt.Println(partOne(node, len(cups)-1)) // 92658374
-	}
-	{
-		// Part one.
-		cups := parseInput("418976235")
-		n := 100
-		node := solver(cups, n)
-		fmt.Println(partOne(node, len(cups)-1)) // 96342875
+		input := "389125467"
+		cups := strToIntSlice(input)
+		visualize(solver(cups, 10), len(cups)-1)
 	}
 
-	// Part two.
 	{
-		initials := parseInput("389125467")
-		n := 1_000_000 // 1 million.
+		input := "418976235"
+		cups := strToIntSlice(input)
+		visualize(solver(cups, 100), len(cups)-1)
+	}
+
+	{
+		input := "389125467"
+		initials := strToIntSlice(input)
+		n := 1_000_000
 		cups := make([]int, n)
 		for i := 0; i < n; i++ {
 			if i < len(initials) {
@@ -34,13 +36,16 @@ func main() {
 				cups[i] = i + 1
 			}
 		}
-		node := solver(cups, n*10)
-		fmt.Println(partTwo(node))
+		linkedList := solver(cups, n*10)
+		a := linkedList[1]
+		b := linkedList[a]
+		fmt.Println(a, b, a*b)
 	}
 
 	{
-		initials := parseInput("418976235")
-		n := 1_000_000 // 1 million.
+		input := "418976235"
+		initials := strToIntSlice(input)
+		n := 1_000_000
 		cups := make([]int, n)
 		for i := 0; i < n; i++ {
 			if i < len(initials) {
@@ -49,112 +54,67 @@ func main() {
 				cups[i] = i + 1
 			}
 		}
-		node := solver(cups, n*10)
-		fmt.Println(partTwo(node))
+		linkedList := solver(cups, n*10)
+		a := linkedList[1]
+		b := linkedList[a]
+		fmt.Println(a, b, a*b)
 	}
 }
 
-func solver(cups []int, n int) *Node {
-	cache := make(map[int]*Node)
-	var head, tail *Node
+func solver(cups []int, n int) []int {
+	linkedList := make([]int, len(cups)+1)
+
 	var max int
-	for i := 0; i < len(cups); i++ {
-		n := cups[i]
-		if n > max {
-			max = n
+	for i := 1; i < len(cups)+1; i++ {
+		if cups[i-1] > max {
+			max = cups[i-1]
 		}
-		if tail == nil {
-			head = NewNode(n)
-			tail = head
-		} else {
-			tail.Next = NewNode(n)
-			tail.Next.Prev = tail
-			tail = tail.Next
-		}
-		cache[tail.Data] = tail
+		linkedList[cups[i-1]] = cups[i%len(cups)]
 	}
 
-	tail.Next = head
-	head.Prev = tail
-
+	curr := cups[0]
 	for i := 0; i < n; i++ {
-		curr := head
-		dst := curr.Data - 1
-
-		set := make(map[int]bool)
-		pickUpTailNode := curr
-		for i := 0; i < 3; i++ {
-			pickUpTailNode = pickUpTailNode.Next
-			set[pickUpTailNode.Data] = true
-		}
+		a := linkedList[curr]
+		b := linkedList[a]
+		c := linkedList[b]
+		dst := curr - 1
 		if dst == 0 {
 			dst = max
 		}
-		if set[dst] {
-			for set[dst] {
-				dst--
-				if dst == 0 {
-					dst = max
-				}
+		for dst == a || dst == b || dst == c {
+			dst--
+			if dst == 0 {
+				dst = max
 			}
 		}
 
-		pickUpHeadNode := curr.Next
-		curr.Next = pickUpTailNode.Next
-		pickUpTailNode.Next.Prev = curr
-
-		curr = cache[dst]
-
-		tailNode := curr.Next
-		curr.Next = pickUpHeadNode
-		pickUpHeadNode.Prev = curr
-
-		pickUpTailNode.Next = tailNode
-		tailNode.Prev = pickUpTailNode
-		head = head.Next
+		linkedList[curr] = linkedList[c]
+		d := linkedList[dst]
+		linkedList[dst] = a
+		linkedList[c] = d
+		curr = linkedList[curr]
 	}
-
-	return cache[1]
+	return linkedList
 }
 
-func partOne(head *Node, n int) []int {
-	result := make([]int, n)
+func visualize(ll []int, n int) {
+	var result []int
+	var curr = 1
 	for i := 0; i < n; i++ {
-		head = head.Next
-		result[i] = head.Data
+		result = append(result, ll[curr])
+		curr = ll[curr]
 	}
-	return result
+	fmt.Println(result)
 }
 
-func partTwo(node *Node) int {
-	for node.Data != 1 {
-		node = node.Next
-	}
-	return node.Next.Data * node.Next.Next.Data
-
-}
-
-type Node struct {
-	Next *Node
-	Prev *Node
-	Data int
-}
-
-func NewNode(n int) *Node {
-	return &Node{
-		Data: n,
-	}
-}
-
-func parseInput(in string) []int {
-	numbers := strings.Split(in, "")
-	result := make([]int, len(numbers))
-	for i, n := range numbers {
-		var err error
-		result[i], err = strconv.Atoi(n)
+func strToIntSlice(in string) []int {
+	result := make([]int, len(in))
+	for i, s := range strings.Split(in, "") {
+		n, err := strconv.Atoi(s)
 		if err != nil {
 			log.Fatal(err)
 		}
+		result[i] = n
 	}
 	return result
 }
